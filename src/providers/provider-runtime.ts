@@ -185,6 +185,8 @@ export interface ProviderProxyRequestCustomizationInput {
   url: URL;
   headers: Headers;
   credential?: ResolvedCredential;
+  /** Guarded fetcher used by the proxy for provider-owned auxiliary requests such as token exchange. */
+  fetcher: typeof fetch;
 }
 
 export interface ProviderProxyDefinition {
@@ -396,6 +398,7 @@ export function defineProviderProxy(input: ProviderProxyDefinition): ProviderPro
         url,
         headers,
         credential,
+        fetcher: egressFetch,
       });
 
       const init: RequestInit = {
