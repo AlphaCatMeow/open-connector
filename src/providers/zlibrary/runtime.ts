@@ -43,22 +43,22 @@ function normalizeEapiDomain(value: string, fieldName: string): string {
     url.protocol !== "https:" ||
     url.username ||
     url.password ||
-    url.port ||
     (url.pathname !== "/" && url.pathname !== "") ||
     url.search ||
     url.hash
   ) {
-    throw new ProviderRequestError(400, `${fieldName} must be an HTTPS domain without a path, port, or credentials`);
+    throw new ProviderRequestError(
+      400,
+      `${fieldName} must be an HTTPS domain without a path, query, fragment, or credentials`,
+    );
   }
-  return url.hostname;
+  return url.host;
 }
 
 function resolveEapiDomains(credential: ZLibraryCredential): string[] {
-  const configuredDomains = [
-    credential.eapiDomain?.trim(),
-    process.env.ZLIBRARY_EAPI_DOMAIN?.trim(),
-    ...defaultEapiDomains,
-  ].filter((value): value is string => Boolean(value));
+  const configuredDomains = [credential.eapiDomain?.trim(), ...defaultEapiDomains].filter((value): value is string =>
+    Boolean(value),
+  );
   return [...new Set(configuredDomains.map((value) => normalizeEapiDomain(value, "Z-Library EAPI domain")))];
 }
 

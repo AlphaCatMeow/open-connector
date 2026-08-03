@@ -28,10 +28,20 @@ describe("resolveEapiDomain", () => {
     expect(resolveEapiDomain({ email: "a@b.c", password: "x", eapiDomain: "https://1lib.sk/" })).toBe("1lib.sk");
   });
 
-  it("rejects an override containing a path", () => {
-    expect(() => resolveEapiDomain({ email: "a@b.c", password: "x", eapiDomain: "https://1lib.sk/eapi" })).toThrow(
-      "without a path",
+  it("allows an explicit HTTPS port", () => {
+    expect(resolveEapiDomain({ email: "a@b.c", password: "x", eapiDomain: "https://1lib.sk:8443" })).toBe(
+      "1lib.sk:8443",
     );
+  });
+
+  it.each([
+    "http://1lib.sk",
+    "https://user:password@1lib.sk",
+    "https://1lib.sk/eapi",
+    "https://1lib.sk?source=test",
+    "https://1lib.sk#fragment",
+  ])("rejects an invalid override: %s", (eapiDomain) => {
+    expect(() => resolveEapiDomain({ email: "a@b.c", password: "x", eapiDomain })).toThrow("must be an HTTPS domain");
   });
 });
 
