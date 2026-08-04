@@ -2,6 +2,7 @@ import type { ResolvedCredential } from "../core/types.ts";
 import type { OAuthClientConfigService } from "./oauth-client-config-service.ts";
 
 import { ConnectionError } from "../connection-service.ts";
+import { refreshSlackOAuthCredential } from "../providers/slack/oauth.ts";
 import { expiresAtFromLifetime, requestRefreshToken } from "./oauth-token.ts";
 
 type OAuthCredential = Extract<ResolvedCredential, { authType: "oauth2" }>;
@@ -30,17 +31,23 @@ export class OAuthCredentialRefreshService implements IOAuthCredentialRefresher 
       );
     }
 
-    const refreshed = await requestRefreshToken({
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
-      responseEnvelope: auth.tokenResponseEnvelope,
-      refreshToken: credential.refreshToken ?? "",
-      tokenRequestFields: auth.tokenRequestFields,
-      tokenEndpointAuthMethod: auth.tokenEndpointAuthMethod,
-      tokenRequestFormat: auth.tokenRequestFormat,
-      tokenUrl: this.clientConfigs.resolveEndpointUrl(service, auth.refreshTokenUrl ?? auth.tokenUrl, config),
-      createError: (message) => new ConnectionError("oauth_token_refresh_failed", message),
-    });
+    const requestTokenRefresh = (value: string): Promise<OAuthCredential> =>
+      requestRefreshToken({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        responseEnvelope: auth.tokenResponseEnvelope,
+        refreshToken: value,
+        tokenRequestFields: auth.tokenRequestFields,
+        tokenEndpointAuthMethod: auth.tokenEndpointAuthMethod,
+        tokenRequestFormat: auth.tokenRequestFormat,
+        tokenUrl: this.clientConfigs.resolveEndpointUrl(service, auth.refreshTokenUrl ?? auth.tokenUrl, config),
+        createError: (message) => new ConnectionError("oauth_token_refresh_failed", message),
+      });
+    if (service == "slack") {
+      return refreshSlackOAuthCredential(credential, requestTokenRefresh);
+    }
+
+    const refreshed = await requestTokenRefresh(credential.refreshToken ?? "");
     const expiresIn =
       refreshed.expiresAt === undefined ? credential.metadata.expires_in : refreshed.metadata.expires_in;
 
@@ -54,6 +61,7 @@ export class OAuthCredentialRefreshService implements IOAuthCredentialRefresher 
       // not an option: a refresh only runs once that timestamp is already past, so
       // the stored token would look expired immediately and refresh on every call.
       expiresAt: refreshed.expiresAt ?? expiresAtFromLifetime(expiresIn),
+      providerSecret: credential.providerSecret,
       profile: credential.profile,
       metadata: {
         ...credential.metadata,
