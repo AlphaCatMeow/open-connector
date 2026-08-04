@@ -120,11 +120,13 @@ export function createFeishuImUserActions(service: string): readonly ActionDefin
       name: "list_messages",
       description: "List messages from one Feishu chat or thread with user-identity history permissions.",
       requiredScopes: [
+        "im:message:readonly",
         "im:message.group_msg:get_as_user",
         "im:message.p2p_msg:get_as_user",
         "im:message.reactions:read",
       ],
       providerPermissions: [
+        "im:message:readonly",
         "im:message.group_msg:get_as_user",
         "im:message.p2p_msg:get_as_user",
         "im:message.reactions:read",
